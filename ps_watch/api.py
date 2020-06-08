@@ -6,9 +6,9 @@ from glom import glom
 from httpx import Client
 from httpx import HTTPError
 
-from .exceptions import PSWatchAPIError
-from .models import PSItem
-from .models import PSProfile
+from ps_watch.exceptions import PSWatchAPIError
+from ps_watch.models import PSItem
+from ps_watch.models import PSProfile
 
 BASE_URL = "https://store.playstation.com/"
 PROFILE_URL = urljoin(BASE_URL, "kamaji/api/valkyrie_storefront/00_09_000/user/profile")
@@ -32,7 +32,7 @@ class PSStoreAPI:
     ) -> Optional[dict]:
         """A helper method to handle API get requests"""
         if session_id:
-            self.client.headers["JSESSIONID"] = session_id
+            self.client.cookies["JSESSIONID"] = session_id
         try:
             # todo pagination
             rsp = self.client.get(url, **kwargs)
