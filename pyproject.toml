@@ -10,6 +10,8 @@ pony = "^0.7.13"
 rich = "^2.0.0"
 glom = "^20.5.0"
 httpx = "^0.13.3"
+typer = "^0.2.1"
+pydantic = "^1.5.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.0"
