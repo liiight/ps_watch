@@ -60,4 +60,4 @@ class PSStoreAPI:
 
     def get_user_profile(self, session_id: str) -> PSProfile:
         profile = self.get(PROFILE_URL, session_id=session_id)
-        return PSProfile(**profile)
+        return PSProfile(**profile["data"])
