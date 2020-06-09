@@ -1,13 +1,17 @@
 from typing import List
 from typing import Optional
+from typing import Type
+from typing import Union
 from urllib.parse import urljoin
 
 from glom import glom
 from httpx import Client
 from httpx import HTTPError
+from pydantic import ValidationError
 
 from ps_watch.exceptions import PSWatchAPIError
-from ps_watch.models import PSItem
+from ps_watch.exceptions import PSWatchValidationError
+from ps_watch.models import PSItemWrapper
 from ps_watch.models import PSProfile
 
 BASE_URL = "https://store.playstation.com/"
@@ -24,8 +28,15 @@ class PSStoreAPI:
     """
 
     def __init__(self, locale: str = "en/US", client: Optional[Client] = None):
-        self.local = locale
+        self.locale = locale
         self.client = client or Client()
+
+    @staticmethod
+    def _serialize(model: Type[Union[PSProfile, PSItemWrapper]], data: dict):
+        try:
+            return model.parse_obj(data)
+        except ValidationError as e:
+            raise PSWatchValidationError(e, data)
 
     def get(
         self, url: str, session_id: Optional[str] = None, **kwargs
@@ -52,12 +63,14 @@ class PSStoreAPI:
         items = self.get(items_url, session_id=session_id, params=params)
         return glom(items, ("items", ["itemId"]))
 
-    def get_items(self, item_ids: List[str]) -> List[PSItem]:
-        return [
-            PSItem(**self.get(f"{ITEM_URL}/{item_id}")["included"])
-            for item_id in item_ids
-        ]
+    def get_item(self, item_id: str) -> PSItemWrapper:
+        url = f"{ITEM_URL.format(self.locale)}/{item_id}"
+        raw_item = self.get(url)
+        return self._serialize(PSItemWrapper, raw_item)
+
+    def get_items(self, item_ids: List[str]) -> List[PSItemWrapper]:
+        return [self.get_item(item_id) for item_id in item_ids]
 
     def get_user_profile(self, session_id: str) -> PSProfile:
         profile = self.get(PROFILE_URL, session_id=session_id)
-        return PSProfile(**profile["data"])
+        return self._serialize(PSProfile, profile["data"])
