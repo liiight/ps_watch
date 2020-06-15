@@ -11,8 +11,9 @@ from pydantic import ValidationError
 
 from ps_watch.exceptions import PSWatchAPIError
 from ps_watch.exceptions import PSWatchValidationError
-from ps_watch.models import PSItemWrapper
+from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
+
 
 BASE_URL = "https://store.playstation.com/"
 PROFILE_URL = urljoin(BASE_URL, "kamaji/api/valkyrie_storefront/00_09_000/user/profile")
@@ -32,7 +33,7 @@ class PSStoreAPI:
         self.client = client or Client()
 
     @staticmethod
-    def _serialize(model: Type[Union[PSProfile, PSItemWrapper]], data: dict):
+    def _serialize(model: Type[Union[PSProfile, PSItem]], data: dict):
         try:
             return model.parse_obj(data)
         except ValidationError as e:
@@ -63,14 +64,26 @@ class PSStoreAPI:
         items = self.get(items_url, session_id=session_id, params=params)
         return glom(items, ("items", ["itemId"]))
 
-    def get_item(self, item_id: str) -> PSItemWrapper:
+    def get_item(self, item_id: str) -> PSItem:
         url = f"{ITEM_URL.format(self.locale)}/{item_id}"
-        raw_item = self.get(url)
-        return self._serialize(PSItemWrapper, raw_item)
+        raw_data = self.get(url)
+        item_spec = {
+            "name": "included.0.attributes.name",
+            "description": "included.0.attributes.long-description",
+            "id": "included.0.id",
+            "prices": "included.0.attributes.skus.0.prices",
+        }
+        item_data = glom(raw_data, item_spec)
+        return self._serialize(PSItem, item_data)
 
-    def get_items(self, item_ids: List[str]) -> List[PSItemWrapper]:
+    def get_items(self, item_ids: List[str]) -> List[PSItem]:
         return [self.get_item(item_id) for item_id in item_ids]
 
     def get_user_profile(self, session_id: str) -> PSProfile:
         profile = self.get(PROFILE_URL, session_id=session_id)
         return self._serialize(PSProfile, profile["data"])
+
+
+p = PSStoreAPI()
+f = p.get_item("UP0006-CUSA05999_00-NFS1800000000001")
+pass
