@@ -14,6 +14,7 @@ from ps_watch.exceptions import PSWatchAPIError
 from ps_watch.exceptions import PSWatchValidationError
 from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
+from ps_watch.models import UserType
 
 BASE_URL = "https://store.playstation.com"
 PROFILE_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/user/profile"
@@ -26,12 +27,19 @@ class PSStoreAPI:
     Class representing the PS Store API
     """
 
-    def __init__(self, locale: str = "en/US", client: Optional[Client] = None):
+    def __init__(
+        self,
+        locale: str = "en/US",
+        client: Optional[Client] = None,
+        user_type: UserType = UserType.non_plus_user,
+    ):
         self.locale = locale
         self.client = client or Client()
+        self.user_type = user_type
 
     @staticmethod
-    def _serialize(model: Type[Union[PSProfile, PSItem]], data: dict):
+    def _serialize(model: Type[Union[PSProfile, PSItem]], data: dict, **kwargs):
+        data.update(kwargs)
         try:
             return model.parse_obj(data)
         except ValidationError as e:
@@ -72,9 +80,10 @@ class PSStoreAPI:
             "description": "included.0.attributes.long-description",
             "id": "included.0.id",
             "prices": "included.0.attributes.skus.0.prices",
+            "release_date": "included.0.attributes.release-date",
         }
         item_data = glom(raw_data, item_spec)
-        return self._serialize(PSItem, item_data)
+        return self._serialize(PSItem, item_data, user_type=self.user_type)
 
     def get_items(self, item_ids: List[str]) -> List[PSItem]:
         return [self.get_item(item_id) for item_id in item_ids]
@@ -83,7 +92,8 @@ class PSStoreAPI:
         profile = self.get(PROFILE_URL, session_id=session_id)
         return self._serialize(PSProfile, profile["data"])
 
-
-p = PSStoreAPI()
-f = p.get_item("UP0006-CUSA05999_00-NFS1800000000001")
-pass
+    def update_user_type(self, session_id: str):
+        profile = self.get_user_profile(session_id)
+        self.user_type = (
+            UserType.plus_user if profile.ps_plus else UserType.non_plus_user
+        )

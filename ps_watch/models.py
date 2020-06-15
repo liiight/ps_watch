@@ -1,4 +1,6 @@
 from datetime import datetime
+from enum import auto
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
@@ -8,6 +10,11 @@ from pydantic import HttpUrl
 
 def _alias_gen(text: str) -> str:
     return text.replace("_", "-")
+
+
+class UserType(Enum):
+    plus_user = auto()
+    non_plus_user = auto()
 
 
 class BasePSModel(BaseModel):
@@ -42,7 +49,25 @@ class PSItem(BaseModel):
     id: str
     name: str
     description: str
+    release_date: datetime
     prices: ItemPrices
+    user_type: UserType
+
+    @property
+    def price(self) -> ItemPriceForUser:
+        return (
+            self.prices.non_plus_user
+            if self.user_type is UserType.non_plus_user
+            else self.prices.plus_user
+        )
+
+    @property
+    def has_discount(self) -> bool:
+        return self.price.discount_percentage > 0
+
+    @property
+    def is_released(self) -> bool:
+        return self.release_date.date() <= datetime.utcnow().date()
 
 
 class PSProfile(BasePSModel):
