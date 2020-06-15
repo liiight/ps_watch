@@ -31,8 +31,6 @@ class ItemPriceForUser(BasePSModel):
     availability: PriceAvailability
     discount_percentage: int
     is_plus: bool
-    strikethrough_price: Optional[ItemPrice]
-    upsell_price: Optional[ItemPrice]
 
 
 class ItemPrices(BasePSModel):

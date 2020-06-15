@@ -1,3 +1,4 @@
+from string import Template
 from typing import List
 from typing import Optional
 from typing import Type
@@ -14,13 +15,10 @@ from ps_watch.exceptions import PSWatchValidationError
 from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
 
-
-BASE_URL = "https://store.playstation.com/"
-PROFILE_URL = urljoin(BASE_URL, "kamaji/api/valkyrie_storefront/00_09_000/user/profile")
-LIST_URL = urljoin(
-    BASE_URL, "kamaji/api/valkyrie_storefront/00_09_000/gateway/lists/v1/users/me/lists"
-)
-ITEM_URL = urljoin(BASE_URL, "valkyrie-api/{}/19/resolve/")
+BASE_URL = "https://store.playstation.com"
+PROFILE_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/user/profile"
+LIST_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/gateway/lists/v1/users/me/lists"
+ITEM_URL_TEMPLATE = Template("valkyrie-api/$locale/19/resolve/$item_id")
 
 
 class PSStoreAPI:
@@ -65,8 +63,10 @@ class PSStoreAPI:
         return glom(items, ("items", ["itemId"]))
 
     def get_item(self, item_id: str) -> PSItem:
-        url = f"{ITEM_URL.format(self.locale)}/{item_id}"
-        raw_data = self.get(url)
+        item_url = urljoin(
+            BASE_URL, ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
+        )
+        raw_data = self.get(item_url)
         item_spec = {
             "name": "included.0.attributes.name",
             "description": "included.0.attributes.long-description",
