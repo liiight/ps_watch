@@ -82,7 +82,9 @@ class PSStoreAPI:
             "release_date": "included.0.attributes.release-date",
         }
         item_data = glom(raw_data, item_spec)
-        return self._serialize(PSItem, item_data, user_type=self.user_type)
+        return self._serialize(
+            PSItem, item_data, user_type=self.user_type, url=item_url
+        )
 
     def get_items(self, item_ids: List[str]) -> List[PSItem]:
         return [self.get_item(item_id) for item_id in item_ids]

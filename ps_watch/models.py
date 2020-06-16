@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import auto
 from enum import Enum
 from typing import Optional
 
@@ -13,14 +12,15 @@ def _alias_gen(text: str) -> str:
 
 
 class UserType(Enum):
-    plus_user = auto()
-    non_plus_user = auto()
+    plus_user = "plus_user"
+    non_plus_user = "non_plus_user"
 
 
 class BasePSModel(BaseModel):
     class Config:
         alias_generator = _alias_gen
         allow_population_by_field_name = True
+        orm_mode = True
 
 
 class ItemPrice(BasePSModel):
@@ -52,6 +52,7 @@ class PSItem(BaseModel):
     release_date: datetime
     prices: ItemPrices
     user_type: UserType
+    url: HttpUrl
 
     @property
     def price(self) -> ItemPriceForUser:
