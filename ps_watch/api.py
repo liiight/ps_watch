@@ -3,7 +3,6 @@ from typing import List
 from typing import Optional
 from typing import Type
 from typing import Union
-from urllib.parse import urljoin
 
 from glom import glom
 from httpx import Client
@@ -19,7 +18,9 @@ from ps_watch.models import UserType
 BASE_URL = "https://store.playstation.com"
 PROFILE_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/user/profile"
 LIST_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/gateway/lists/v1/users/me/lists"
-ITEM_URL_TEMPLATE = Template("valkyrie-api/$locale/19/resolve/$item_id")
+
+ITEMS_URL_TEMPLATE = Template(f"{LIST_URL}/$list_id/items")
+ITEM_URL_TEMPLATE = Template(f"{BASE_URL}/valkyrie-api/$locale/19/resolve/$item_id")
 
 
 class PSStoreAPI:
@@ -65,15 +66,13 @@ class PSStoreAPI:
         return glom(lists, "lists.0.listId")
 
     def get_list_item_ids(self, list_id: str, session_id: str) -> List[str]:
-        items_url = f"{LIST_URL}/{list_id}/items"
+        items_url = ITEMS_URL_TEMPLATE.substitute(list_id=list_id)
         params = {"limit": 50, "offset": 0, "sort": "-addTime"}
         items = self.get(items_url, session_id=session_id, params=params)
         return glom(items, ("items", ["itemId"]))
 
     def get_item(self, item_id: str) -> PSItem:
-        item_url = urljoin(
-            BASE_URL, ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
-        )
+        item_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
         raw_data = self.get(item_url)
         item_spec = {
             "name": "included.0.attributes.name",
