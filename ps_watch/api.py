@@ -39,16 +39,16 @@ class PSStoreAPI:
         self.user_type = user_type
 
     @staticmethod
-    def _serialize(model: Type[Union[PSProfile, PSItem]], data: dict, **kwargs):
+    def _serialize(
+        model: Union[Type[PSProfile], Type[PSItem]], data: dict, **kwargs
+    ) -> Union[PSProfile, PSItem]:
         data.update(kwargs)
         try:
             return model.parse_obj(data)
         except ValidationError as e:
             raise PSWatchValidationError(e, data)
 
-    def get(
-        self, url: str, session_id: Optional[str] = None, **kwargs
-    ) -> Optional[dict]:
+    def get(self, url: str, session_id: Optional[str] = None, **kwargs) -> dict:
         """A helper method to handle API get requests"""
         if session_id:
             self.client.cookies["JSESSIONID"] = session_id
