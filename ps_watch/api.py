@@ -1,15 +1,19 @@
 from string import Template
+from typing import Any
+from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Type
 from typing import Union
 
 from glom import glom
+from glom import GlomError
 from httpx import Client
 from httpx import HTTPError
 from pydantic import ValidationError
 
 from ps_watch.exceptions import PSWatchAPIError
+from ps_watch.exceptions import PSWatchDataError
 from ps_watch.exceptions import PSWatchValidationError
 from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
@@ -39,6 +43,13 @@ class PSStoreAPI:
         self.user_type = user_type
 
     @staticmethod
+    def _glom(data: Iterable, spec: str) -> Any:
+        try:
+            return glom(data, spec)
+        except GlomError as e:
+            raise PSWatchDataError(e, data)
+
+    @staticmethod
     def _serialize(
         model: Union[Type[PSProfile], Type[PSItem]], data: dict, **kwargs
     ) -> Union[PSProfile, PSItem]:
@@ -63,18 +74,18 @@ class PSStoreAPI:
     def get_wish_list_id(self, session_id: str) -> str:
         params = {"listTypes": "WISHLIST"}
         lists = self.get(url=LIST_URL, session_id=session_id, params=params)
-        return glom(lists, "lists.0.listId")
+        return self._glom(lists, "lists.0.listId")
 
     def get_list_item_ids(self, list_id: str, session_id: str) -> List[str]:
         items_url = ITEMS_URL_TEMPLATE.substitute(list_id=list_id)
         params = {"limit": 50, "offset": 0, "sort": "-addTime"}
         items = self.get(items_url, session_id=session_id, params=params)
-        return glom(items, ("items", ["itemId"]))
+        return self._glom(items, ("items", ["itemId"]))
 
     def get_item(self, item_id: str) -> PSItem:
         item_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
         raw_data = self.get(item_url)
-        first_item = glom(raw_data, "included.0")
+        first_item = self._glom(raw_data, "included.0")
         item_spec = {
             "name": "attributes.name",
             "description": "attributes.long-description",
@@ -82,7 +93,7 @@ class PSStoreAPI:
             "prices": "attributes.skus.0.prices",
             "release_date": "attributes.release-date",
         }
-        item_data = glom(first_item, item_spec)
+        item_data = self._glom(first_item, item_spec)
         return self._serialize(
             PSItem, item_data, user_type=self.user_type, url=item_url
         )
