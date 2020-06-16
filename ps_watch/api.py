@@ -74,14 +74,15 @@ class PSStoreAPI:
     def get_item(self, item_id: str) -> PSItem:
         item_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
         raw_data = self.get(item_url)
+        first_item = glom(raw_data, "included.0")
         item_spec = {
-            "name": "included.0.attributes.name",
-            "description": "included.0.attributes.long-description",
-            "id": "included.0.id",
-            "prices": "included.0.attributes.skus.0.prices",
-            "release_date": "included.0.attributes.release-date",
+            "name": "attributes.name",
+            "description": "attributes.long-description",
+            "id": "id",
+            "prices": "attributes.skus.0.prices",
+            "release_date": "attributes.release-date",
         }
-        item_data = glom(raw_data, item_spec)
+        item_data = glom(first_item, item_spec)
         return self._serialize(
             PSItem, item_data, user_type=self.user_type, url=item_url
         )
