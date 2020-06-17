@@ -5,8 +5,7 @@ description = "Monitor and get alert on Playstation store item updates"
 authors = ["Or Carmi <or.carmi82@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.6.1,<4.0"
-pony = "^0.7.13"
+python = ">=3.6.1"
 rich = "^2.0.0"
 glom = "^20.5.0"
 httpx = "^0.13.3"
