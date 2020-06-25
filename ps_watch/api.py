@@ -47,7 +47,7 @@ class PSStoreAPI:
     def store_locale(self) -> str:
         return "-".join(self.locale).lower()
 
-    def get(
+    def _get(
         self, url: str, session_id: Optional[str] = None, to_json: bool = True, **kwargs
     ) -> dict:
         """A helper method to handle API get requests"""
@@ -62,7 +62,7 @@ class PSStoreAPI:
 
     def get_wish_list_id(self, session_id: str) -> str:
         params = {"listTypes": "WISHLIST"}
-        lists = self.get(url=LIST_URL, session_id=session_id, params=params)
+        lists = self._get(url=LIST_URL, session_id=session_id, params=params)
         return glom(lists, "lists.0.listId")
 
     def get_list_item_ids(
@@ -73,7 +73,7 @@ class PSStoreAPI:
 
         raw_items = []
         item_get_func = partial(
-            self.get, items_url, session_id=session_id, params=params
+            self._get, items_url, session_id=session_id, params=params
         )
 
         raw_rsp = item_get_func()
@@ -89,7 +89,7 @@ class PSStoreAPI:
         store_url = ITEM_STORE_URL_TEMPLATE.substitute(
             locale=self.store_locale, item_id=item_id
         )
-        raw_data = self.get(api_url)
+        raw_data = self._get(api_url)
         first_item = glom(raw_data, "included.0")
         item_spec = {
             "name": "attributes.name",
@@ -111,7 +111,7 @@ class PSStoreAPI:
         return [self.get_item(item_id) for item_id in item_ids]
 
     def get_user_profile(self, session_id: str) -> PSProfile:
-        profile = self.get(PROFILE_URL, session_id=session_id)
+        profile = self._get(PROFILE_URL, session_id=session_id)
         return serialize(PSProfile, profile["data"])
 
     def update_user_type(self, session_id: str):
