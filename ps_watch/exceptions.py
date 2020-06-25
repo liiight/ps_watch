@@ -1,3 +1,4 @@
+from glom import glom
 from glom import GlomError
 from httpx import HTTPError
 from pydantic import ValidationError
@@ -9,7 +10,10 @@ class PSWatchError(Exception):
 
 class PSWatchAPIError(PSWatchError):
     def __init__(self, http_error: HTTPError):
-        super().__init__(f"PSWatchAPIError error: {http_error}")
+        msg = f"PSWatchAPIError error:\n{http_error}"
+        if glom(http_error, "response.status_code", default=None) == 401:
+            msg = f"Unauthorized, session ID invalid or expired:\n{http_error}"
+        super().__init__(msg)
 
 
 class PSWatchValidationError(PSWatchError):

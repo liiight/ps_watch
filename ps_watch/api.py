@@ -1,3 +1,4 @@
+from functools import partial
 from string import Template
 from typing import Any
 from typing import Iterable
@@ -10,6 +11,7 @@ from glom import glom
 from glom import GlomError
 from glom import Spec
 from httpx import Client
+from httpx import ConnectTimeout
 from httpx import HTTPError
 from pydantic import ValidationError
 
@@ -71,7 +73,7 @@ class PSStoreAPI:
             rsp = self.client.get(url, **kwargs)
             rsp.raise_for_status()
             return rsp.json() if to_json else rsp
-        except HTTPError as e:
+        except (HTTPError, ConnectTimeout) as e:
             raise PSWatchAPIError(e)
 
     def get_wish_list_id(self, session_id: str) -> str:
@@ -79,12 +81,24 @@ class PSStoreAPI:
         lists = self.get(url=LIST_URL, session_id=session_id, params=params)
         return self._glom(lists, "lists.0.listId")
 
-    def get_list_item_ids(self, list_id: str, session_id: str) -> List[str]:
+    def get_list_item_ids(
+        self, list_id: str, session_id: str, limit: int = 20
+    ) -> List[str]:
         items_url = ITEMS_URL_TEMPLATE.substitute(list_id=list_id)
-        params = {"limit": 50, "offset": 0, "sort": "-addTime"}
-        # todo pagination
-        items = self.get(items_url, session_id=session_id, params=params)
-        return self._glom(items, ("items", ["itemId"]))
+        params = {"limit": limit, "offset": 0, "sort": "-addTime"}
+
+        raw_items = []
+        item_get_func = partial(
+            self.get, items_url, session_id=session_id, params=params
+        )
+
+        raw_rsp = item_get_func()
+        while raw_rsp["totalItems"] >= raw_rsp["returned"] > 0:
+            raw_items += raw_rsp["items"]
+            params["offset"] += raw_rsp["returned"]
+            raw_rsp = item_get_func()
+
+        return self._glom(raw_items, ["itemId"])
 
     def get_item(self, item_id: str) -> PSItem:
         api_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
