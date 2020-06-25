@@ -1,27 +1,19 @@
 from functools import partial
 from string import Template
-from typing import Any
-from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Type
-from typing import Union
 
-from glom import glom
-from glom import GlomError
-from glom import Spec
 from httpx import Client
 from httpx import ConnectTimeout
 from httpx import HTTPError
-from pydantic import ValidationError
 
 from ps_watch.exceptions import PSWatchAPIError
-from ps_watch.exceptions import PSWatchDataError
-from ps_watch.exceptions import PSWatchValidationError
 from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
 from ps_watch.models import UserType
+from ps_watch.utils import glom
+from ps_watch.utils import serialize
 
 BASE_URL = "https://store.playstation.com"
 PROFILE_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/user/profile"
@@ -55,25 +47,6 @@ class PSStoreAPI:
     def store_locale(self) -> str:
         return "-".join(self.locale).lower()
 
-    @staticmethod
-    def _glom(data: Iterable, spec: Union[str, dict, tuple, Spec]) -> Any:
-        # todo move to util
-        try:
-            return glom(data, spec)
-        except GlomError as e:
-            raise PSWatchDataError(e, data)
-
-    @staticmethod
-    def _serialize(
-        model: Union[Type[PSProfile], Type[PSItem]], data: dict, **kwargs
-    ) -> Union[PSProfile, PSItem]:
-        # todo move to util
-        data.update(kwargs)
-        try:
-            return model.parse_obj(data)
-        except ValidationError as e:
-            raise PSWatchValidationError(e, data)
-
     def get(
         self, url: str, session_id: Optional[str] = None, to_json: bool = True, **kwargs
     ) -> dict:
@@ -90,7 +63,7 @@ class PSStoreAPI:
     def get_wish_list_id(self, session_id: str) -> str:
         params = {"listTypes": "WISHLIST"}
         lists = self.get(url=LIST_URL, session_id=session_id, params=params)
-        return self._glom(lists, "lists.0.listId")
+        return glom(lists, "lists.0.listId")
 
     def get_list_item_ids(
         self, list_id: str, session_id: str, limit: int = 20
@@ -109,7 +82,7 @@ class PSStoreAPI:
             params["offset"] += raw_rsp["returned"]
             raw_rsp = item_get_func()
 
-        return self._glom(raw_items, ["itemId"])
+        return glom(raw_items, ["itemId"])
 
     def get_item(self, item_id: str) -> PSItem:
         api_url = ITEM_URL_TEMPLATE.substitute(locale=self.api_locale, item_id=item_id)
@@ -117,7 +90,7 @@ class PSStoreAPI:
             locale=self.store_locale, item_id=item_id
         )
         raw_data = self.get(api_url)
-        first_item = self._glom(raw_data, "included.0")
+        first_item = glom(raw_data, "included.0")
         item_spec = {
             "name": "attributes.name",
             "description": "attributes.long-description",
@@ -125,8 +98,8 @@ class PSStoreAPI:
             "prices": "attributes.skus.0.prices",
             "release_date": "attributes.release-date",
         }
-        item_data = self._glom(first_item, item_spec)
-        return self._serialize(
+        item_data = glom(first_item, item_spec)
+        return serialize(
             PSItem,
             item_data,
             user_type=self.user_type,
@@ -139,7 +112,7 @@ class PSStoreAPI:
 
     def get_user_profile(self, session_id: str) -> PSProfile:
         profile = self.get(PROFILE_URL, session_id=session_id)
-        return self._serialize(PSProfile, profile["data"])
+        return serialize(PSProfile, profile["data"])
 
     def update_user_type(self, session_id: str):
         profile = self.get_user_profile(session_id)
