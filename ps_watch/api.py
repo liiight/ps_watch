@@ -4,6 +4,7 @@ from typing import Any
 from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Type
 from typing import Union
 
@@ -38,13 +39,21 @@ class PSStoreAPI:
 
     def __init__(
         self,
-        locale: str = "en/US",
+        locale: Tuple[str, str] = ("en", "US"),  # todo add support for other locales
         client: Optional[Client] = None,
         user_type: UserType = UserType.non_plus_user,
     ):
         self.locale = locale
         self.client = client or Client()
         self.user_type = user_type
+
+    @property
+    def api_locale(self) -> str:
+        return "/".join(self.locale)
+
+    @property
+    def store_locale(self) -> str:
+        return "-".join(self.locale).lower()
 
     @staticmethod
     def _glom(data: Iterable, spec: Union[str, dict, tuple, Spec]) -> Any:
@@ -101,9 +110,9 @@ class PSStoreAPI:
         return self._glom(raw_items, ["itemId"])
 
     def get_item(self, item_id: str) -> PSItem:
-        api_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
+        api_url = ITEM_URL_TEMPLATE.substitute(locale=self.api_locale, item_id=item_id)
         store_url = ITEM_STORE_URL_TEMPLATE.substitute(
-            locale=self.locale, item_id=item_id
+            locale=self.store_locale, item_id=item_id
         )
         raw_data = self.get(api_url)
         first_item = self._glom(raw_data, "included.0")
