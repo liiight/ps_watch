@@ -8,6 +8,7 @@ from typing import Union
 
 from glom import glom
 from glom import GlomError
+from glom import Spec
 from httpx import Client
 from httpx import HTTPError
 from pydantic import ValidationError
@@ -25,6 +26,7 @@ LIST_URL = f"{BASE_URL}/kamaji/api/valkyrie_storefront/00_09_000/gateway/lists/v
 
 ITEMS_URL_TEMPLATE = Template(f"{LIST_URL}/$list_id/items")
 ITEM_URL_TEMPLATE = Template(f"{BASE_URL}/valkyrie-api/$locale/19/resolve/$item_id")
+ITEM_STORE_URL_TEMPLATE = Template(f"{BASE_URL}/$locale/product/$item_id")
 
 
 class PSStoreAPI:
@@ -43,7 +45,7 @@ class PSStoreAPI:
         self.user_type = user_type
 
     @staticmethod
-    def _glom(data: Iterable, spec: str) -> Any:
+    def _glom(data: Iterable, spec: Union[str, dict, tuple, Spec]) -> Any:
         try:
             return glom(data, spec)
         except GlomError as e:
@@ -83,8 +85,11 @@ class PSStoreAPI:
         return self._glom(items, ("items", ["itemId"]))
 
     def get_item(self, item_id: str) -> PSItem:
-        item_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
-        raw_data = self.get(item_url)
+        api_url = ITEM_URL_TEMPLATE.substitute(locale=self.locale, item_id=item_id)
+        store_url = ITEM_STORE_URL_TEMPLATE.substitute(
+            locale=self.locale, item_id=item_id
+        )
+        raw_data = self.get(api_url)
         first_item = self._glom(raw_data, "included.0")
         item_spec = {
             "name": "attributes.name",
@@ -95,7 +100,11 @@ class PSStoreAPI:
         }
         item_data = self._glom(first_item, item_spec)
         return self._serialize(
-            PSItem, item_data, user_type=self.user_type, url=item_url
+            PSItem,
+            item_data,
+            user_type=self.user_type,
+            api_url=api_url,
+            store_url=store_url,
         )
 
     def get_items(self, item_ids: List[str]) -> List[PSItem]:
@@ -110,3 +119,8 @@ class PSStoreAPI:
         self.user_type = (
             UserType.plus_user if profile.ps_plus else UserType.non_plus_user
         )
+
+    def get_items_from_wish_list(self, session_id: str) -> List[PSItem]:
+        wish_list_id = self.get_wish_list_id(session_id)
+        item_ids = self.get_list_item_ids(wish_list_id, session_id)
+        return self.get_items(item_ids)

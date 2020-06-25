@@ -12,7 +12,7 @@ def _alias_gen(text: str) -> str:
     return text.replace("_", "-")
 
 
-class UserType(Enum):
+class UserType(str, Enum):
     plus_user = "plus_user"
     non_plus_user = "non_plus_user"
 
@@ -53,7 +53,8 @@ class PSItem(BaseModel):
     release_date: datetime
     prices: ItemPrices
     user_type: UserType
-    url: HttpUrl
+    api_url: HttpUrl
+    store_url: HttpUrl
 
     last_updated: Optional[datetime]
 
