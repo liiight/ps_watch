@@ -57,6 +57,7 @@ class PSStoreAPI:
 
     @staticmethod
     def _glom(data: Iterable, spec: Union[str, dict, tuple, Spec]) -> Any:
+        # todo move to util
         try:
             return glom(data, spec)
         except GlomError as e:
@@ -66,6 +67,7 @@ class PSStoreAPI:
     def _serialize(
         model: Union[Type[PSProfile], Type[PSItem]], data: dict, **kwargs
     ) -> Union[PSProfile, PSItem]:
+        # todo move to util
         data.update(kwargs)
         try:
             return model.parse_obj(data)
