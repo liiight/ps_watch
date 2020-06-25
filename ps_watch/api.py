@@ -61,15 +61,16 @@ class PSStoreAPI:
         except ValidationError as e:
             raise PSWatchValidationError(e, data)
 
-    def get(self, url: str, session_id: Optional[str] = None, **kwargs) -> dict:
+    def get(
+        self, url: str, session_id: Optional[str] = None, to_json: bool = True, **kwargs
+    ) -> dict:
         """A helper method to handle API get requests"""
         if session_id:
             self.client.cookies["JSESSIONID"] = session_id
         try:
-            # todo pagination
             rsp = self.client.get(url, **kwargs)
             rsp.raise_for_status()
-            return rsp.json()
+            return rsp.json() if to_json else rsp
         except HTTPError as e:
             raise PSWatchAPIError(e)
 
@@ -81,6 +82,7 @@ class PSStoreAPI:
     def get_list_item_ids(self, list_id: str, session_id: str) -> List[str]:
         items_url = ITEMS_URL_TEMPLATE.substitute(list_id=list_id)
         params = {"limit": 50, "offset": 0, "sort": "-addTime"}
+        # todo pagination
         items = self.get(items_url, session_id=session_id, params=params)
         return self._glom(items, ("items", ["itemId"]))
 
