@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
+from pydantic import validator
 
 
 def _alias_gen(text: str) -> str:
@@ -53,6 +54,12 @@ class PSItem(BaseModel):
     prices: ItemPrices
     user_type: UserType
     url: HttpUrl
+
+    last_updated: Optional[datetime]
+
+    @validator("last_updated", pre=True)
+    def update_time(cls, v):
+        return v or datetime.utcnow()
 
     @property
     def price(self) -> ItemPriceForUser:
