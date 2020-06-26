@@ -66,7 +66,7 @@ class PSStoreAPI:
         return glom(lists, "lists.0.listId")
 
     def get_list_item_ids(
-        self, list_id: str, session_id: str, limit: int = 20
+        self, list_id: str, session_id: str, limit: int = 50
     ) -> List[str]:
         items_url = ITEMS_URL_TEMPLATE.substitute(list_id=list_id)
         params = {"limit": limit, "offset": 0, "sort": "-addTime"}

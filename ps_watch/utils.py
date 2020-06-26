@@ -14,7 +14,7 @@ from ps_watch.models import PSItem
 from ps_watch.models import PSProfile
 
 
-def glom(data: Iterable, spec: Union[str, dict, tuple, Spec]) -> Any:
+def glom(data: Iterable, spec: Union[str, dict, tuple, list, Spec]) -> Any:
     try:
         return _glom(data, spec)
     except GlomError as e:
